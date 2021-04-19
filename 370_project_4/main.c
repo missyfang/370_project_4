@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <math.h>
 
 #define NUMMEMORY 65536 /* maximum number of words in memory */
 #define NUMREGS 8 /* number of machine registers */
@@ -14,27 +15,26 @@
 
 /*
  initialize cache with command line
-  How to handel LRU? is it the total count????
-  evict if LRU = count = # blocks per set ?????
- need to initalize block array to correct size??????
+ set LRU in cache to 0.
 */
 
 /*
  break down addresss
  for fetch addr = PC
- for lw/sw addr = reg A = offset
+ for lw/sw addr = reg A + offset
  
 calc # bits for tag, set, offset based on cache struct vars
  # offset bits = log blocksize
  # set index bits = log # sts
  # tag bits = addr - set bits - offset bits // how big is the addr????/
-extract these bits from address
+extract these bits from address]
+ 
+ address & log blocksize
+ address shift by offset bits
+        * log # sets
+ addres shift by # set bits
+        &  addr - set bits - offset bits
 can only be 1,2,4,8
- if(off = 1) & 1
- if(off = 2) & 3
- if(off = 4) & 7
- if(off = 8) & 15
- // not sure of should shift or just use diff mask numers for tag and set bits  ?????????
  */
 
 //LOAD
@@ -45,18 +45,18 @@ can only be 1,2,4,8
  check if in cache block array
  int i = setIndex * blocksPerSet
  while (i < setIndex + 1 * blocksPerSet){
-    if (blocks[i].tag = addr tag ){ // HIT
+    if (blocks[i].tag = addr tag && valid = false){ // was told to add valid = false but not sure that is correct since the data ought already be in the cache i.e valid = true
         // update LRU
         return blocks.[i].data[ addr offset];
  }
  }
  // MISS
- //create and initalize new block
+ //initalize block
  i = setIndex * blocksPerSet;
  // check if any empty spots
  while ( i < setIndex + 1 * blocksPerSet){
     if (blocks[i].valid == 0){
-        blocks[i] = new block;
+        initalize blocks[i] ;
         // update LRU
         return blocks.[i].data[addr offset];
  }
@@ -68,13 +68,14 @@ can only be 1,2,4,8
         if (blocks[i].isDirty == true){
             //write back
         }
-        blocks[i] = new block;
+      intialize  blocks[i];
         // update LRU
         return blocks.[i].data[addr offset];
  }
  }
 */
 
+// combine return spec block
 // SET LRU
 /*
 // all LRU orginally set to 0???? , need to be for my implementaiton to work
@@ -96,23 +97,22 @@ can only be 1,2,4,8
  
  check if in cache
  // HIT
- modify block data at offset = regB   // is regB also need to be read into cache or is it just gonna be the actual number/line ?????????
- change dirty bit to 1   // only SW can make a block dirty??????
+ modify block data at block offset = regB
+ change dirty bit to 1   // only SW can make a block dirty
  update LRU
  
 
  // MISS
- creat block initalized to addres regA + offset
+ initalized block to addres regA + offset
  // avaiavble way
  check if any valid bits = 0
- bring from memory to cache
- modify  // data = regB???????
+ bring from memory to cache i.e initialize block
+ modify  // data = regB
  update dirty bit
  up date LRU
  
  // MISS & EVICT
  find LRU, write back, evict
- check if any valid bits = 0
  bring from memory to cache
  modify  // data = regB
  update dirty bit
@@ -120,21 +120,26 @@ can only be 1,2,4,8
 
 */
 
+// prolly have a write back function
+// ought have func for loops return which spec block then initalze/return data for/from the spec block in load and store funcs
+// each case sep func that loops thru and returns spec block
+    // could have func loops to see if hit
+    // could have func that loops to find any valid bit = 0
+    // could have func to find LRU
+// could have a initalize block func
 
 /*
 // OH Qs
-How to Implement WRITE BACK
-how to CREATE BLOCK
-    take addr from memory and create block
-how to WRITE TO MEM
-comand line
-what is enum action
-when to call print
-using CAEN
+when intalized block need to bring in entire block from ememory so mem[i] to mem[i + blocksize - 1]?
+how to WRITE back // need to write entire block to MEM mem[i] = sw stuff
+inserting print action
+still confused aboutintializing block[i].data[block offset] // where is the data found in memory ??? just set to regB???
+
+ address in 32B?
  */
 
-
-
+// even tho cache global wouldnt carry changes from init back???????
+// check write back addr imp
 // proj 4 structs
 enum actionType
 {
@@ -148,26 +153,24 @@ enum actionType
 typedef struct blockStruct
 {
   int data[MAX_BLOCK_SIZE];
-    // number ways in block
   bool isDirty;
   int lruLabel;
   int set;
   int tag;
+  int valid;
     // want to add valid bit
 } blockStruct;
 
 typedef struct cacheStruct
 {
-  blockStruct blocks[MAX_CACHE_SIZE];
-    // numer total blocks
+  blockStruct blocks[MAX_CACHE_SIZE]; // important for LRU implementation need to looop thru LRU block[].lrulabel = 0 for all in cache
   int blocksPerSet;
   int blockSize;
-  int lru; // what iis this used for
+  int lru; // what iis this used for???????
   int numSets;
 } cacheStruct;
 
-/* Global Cache variable */
-cacheStruct cache;
+
 
 // proj 1 state struct
 typedef struct stateStruct {
@@ -177,34 +180,43 @@ typedef struct stateStruct {
     int numMemory;
 } stateType;
 
+/* Global Cache variable */
+cacheStruct cache;
+struct stateStruct state;
+
 void printState(stateType *);
 int convertNum(int);
 void printAction(int address, int size, enum actionType type);
 void printCache();
-int loadFromMem(int addr); // Properly simulates the cache for a load from
+int getOffset(int addr, cacheStruct* cache);
+int getSetIndex(int addr, cacheStruct* cache);
+int getTag(int addr, int setBits, int offsetBits, cacheStruct* cache);
+void updateLRU(cacheStruct* cache, int target, int set);
+int search_cache_set( int start, int end, int tag, cacheStruct* cache);
+int check_valid (int start, int end, cacheStruct* cache);
+int evict (int start, int end, cacheStruct* cache, struct stateStruct* state);
+int write_back_addr( cacheStruct* cache, struct stateStruct* state, int tag, int set, int offset);
+void write_back( cacheStruct* cache, struct stateStruct* state, int addr, int block);
+void init_block( cacheStruct* cache, struct stateStruct* state, int addr, int tag, int set, int offset, int blockIndex);
+
+int loadFromMem(int addr, cacheStruct* cache, struct stateStruct * state); // Properly simulates the cache for a load from
                     // memory address “addr”. Returns the loaded value.
 
-void storeToMem(int addr, int data); // Properly simulates the cache for a store
+void storeToMem(int addr, int data, cacheStruct* cache, struct stateStruct* state); // Properly simulates the cache for a store
                                 // to memory address “addr”. Returns nothing.
-
 
 int
 main(int argc, char *argv[])
 {
     char line[MAXLINELENGTH];
-    stateType state;
     FILE *filePtr;
 
-    if (argc != 2) {   // change to 4 or 5 ??????????
+    if (argc != 5) {
         printf("error: usage: %s <machine-code file>\n", argv[0]);
         exit(1);
     }
     
-    // need to initalize cache with command line  IM Not sure if this is correct at all?????
-    cache.blockSize = atoi(argv[2]);
-    cache.numSets = atoi(argv[3]);
-    cache.blocksPerSet = atoi(argv[4]);
-
+    
     filePtr = fopen(argv[1], "r");
     if (filePtr == NULL) {
         printf("error: can't open file %s", argv[1]);
@@ -223,12 +235,25 @@ main(int argc, char *argv[])
         printf("memory[%d]=%d\n", state.numMemory, state.mem[state.numMemory]);
         count++;
     }
- 
+    
+    // need to initalize cache with command line
+    cache.blockSize = atoi(argv[2]);
+    cache.numSets = atoi(argv[3]);
+    cache.blocksPerSet = atoi(argv[4]);
+
+    // initalizes all LRU to be 0
+    for(int i = 0 ; i< MAX_CACHE_SIZE; i++){         // do i need to initialize other stuff to 0????????/
+        cache.blocks[i].lruLabel = 0;
+    }
+  
     // initalize registars and pc to 0
     state.pc = 0;
     for( int i = 0 ; i  < NUMREGS ; i++ ){
         state.reg[i] = 0;
     }
+    
+
+   
     // useful variables
     state.numMemory = count;  // number of lines in memory
     int opcode = 0;
@@ -236,24 +261,26 @@ main(int argc, char *argv[])
     int regB = 0;
     int dest_reg = 0;
     int offset = 0;
+    
     // intruction count
     int j = 0;
     while (state.pc < state.numMemory + 1) {
         // GONNNA ADD LOAD
         printState(&state);
         // extract opcode
-        int decimal = state.mem[state.pc] >> 22;
+        //int decimal = state.mem[state.pc] >> 22;
+        int decimal = loadFromMem(state.pc, &cache, &state) >> 22;
         opcode = decimal & 7;
         // extract regA
-        decimal = state.mem[state.pc] >> 19;
+        decimal = loadFromMem(state.pc, &cache, &state) >> 19;
         regA = decimal & 7;
         // extract regB
-        decimal = state.mem[state.pc] >> 16;
+        decimal = loadFromMem(state.pc, &cache, &state) >> 16;
         regB = decimal & 7;
         // extraxt dest for nor and add, not used anywhere else.
-        dest_reg =  state.mem[state.pc] & 7;
+        dest_reg =  loadFromMem(state.pc, &cache, &state) & 7;
         // opcode == add
-        if (opcode == 0){ // what if something like add 1 2 five  is this possible??????????
+        if (opcode == 0){
             state.reg[dest_reg] = state.reg[regA] + state.reg[regB];  // get a content ????????
             state.pc++;
         }
@@ -264,14 +291,21 @@ main(int argc, char *argv[])
         }
         // opcode == lw
         if ( opcode == 2){
-            offset = convertNum(state.mem[state.pc] & 0xffff); // keeps only last 16 bits of decimal
-            state.reg[regB] = state.mem[state.reg[regA] + offset];
+           // offset = convertNum(state.mem[state.pc] & 0xffff); // keeps only last 16 bits of decimal
+            //state.reg[regB] = state.mem[state.reg[regA] + offset]; // = load[state.reg[regA] + offset}
+            offset = convertNum(loadFromMem(state.pc, &cache, &state) & 0xffff);
+            int trash = state.reg[regA] + offset;
+            state.reg[regB] = loadFromMem(trash, &cache, &state);
             state.pc++;
         }
         // opcode = sw only time modify memory
         if ( opcode == 3){
-            offset = convertNum(state.mem[state.pc] & 0xffff); // keeps only last 16 bits of decimal
-            state.mem[offset + state.reg[regA]] = state.reg[regB]; // at memory location offset + content of A =  content of B
+           // offset = convertNum(state.mem[state.pc] & 0xffff); // keeps only last 16 bits of decimal
+            // state.mem[offset + state.reg[regA]] = state.reg[regB]; // at memory location offset + content of A =  content of B
+            offset = convertNum(loadFromMem(state.pc, &cache, &state) & 0xffff);
+            int shit = offset + state.reg[regA];
+            int data = state.reg[regB];
+            storeToMem(shit, data,&cache, &state);
             state.pc++;
         }
         // opcode == beq
@@ -310,6 +344,156 @@ main(int argc, char *argv[])
 }
 
 // PROJ 4 HELPER FUNCS
+// initalize cach
+
+// return valur of addr offset
+int getOffset(int addr, cacheStruct* cache){
+    int bits = log2(cache->blockSize);
+    int offset =  addr & bits;                      // mask
+    return offset;
+}
+// return value of addr set index
+int getSetIndex(int addr, cacheStruct* cache){
+    int shift = log2(cache->blockSize);              // shift by # offset bits
+    int bits = log2(cache->numSets);
+    int temp = addr >> shift;
+    int index = (temp & bits);             // mask and shift
+    return index;
+}
+// return value of addr tag
+int getTag(int addr, int setBits, int offsetBits, cacheStruct* cache){
+    int shift_set = log2(cache->numSets);
+    int shift_off = log2(cache->blockSize);
+    int shift = shift_off + shift_set;
+    int tag = addr >> shift;             // mask and shift by # set bits
+    return tag;
+}
+// load function
+int loadFromMem (int addr, cacheStruct* cache, struct stateStruct* state){
+    int offset = getOffset(addr, cache);
+    int setIndex = getSetIndex(addr, cache);
+    int tag = getTag(addr, setIndex , offset, cache);
+    
+    // check for cache hit
+    int setStart = setIndex * cache->blocksPerSet; // index into set
+    int setEnd = (setIndex + 1) * cache->blocksPerSet;  // index of start of next set
+    int hit = search_cache_set(setStart, setEnd, tag, cache);
+    if (hit != -1){                                     // HIT
+        init_block(cache, state, addr, tag, setIndex, offset, hit);    // not sure if should be passing *state?????????
+        // call LRU here or in init func?????????????
+        return cache->blocks[hit].data[offset];  }     // return data found in cache
+        
+    // MISS
+    int emptySlot = check_valid(setStart, setEnd, cache);
+    if (emptySlot != -1){
+        init_block(cache, state, addr, tag, setIndex, offset, emptySlot);
+        // call LRU here or in init func?????????????
+        return cache->blocks[emptySlot].data[offset]; } // return data put into empty slot in cache
+    
+    // EVICT
+    int evictionBlock = evict(setStart, setEnd, cache, state);
+    if (cache->blocks[evictionBlock].isDirty == true){              // check if dirty
+        int writeBackAddr = write_back_addr(cache, state, tag, setIndex, offset);
+        write_back(cache, state, writeBackAddr, evictionBlock); }
+    init_block(cache, state, addr, tag, setIndex, offset, evictionBlock);
+    return cache->blocks[evictionBlock].data[offset];
+}
+void storeToMem( int addr, int data, cacheStruct* cache, struct stateStruct* state){
+    int offset = getOffset(addr, cache);
+    int setIndex = getSetIndex(addr, cache);
+    int tag = getTag(addr, setIndex , offset, cache);
+    int setStart = setIndex * cache->blocksPerSet; // index into set
+    int setEnd = (setIndex + 1) * cache->blocksPerSet;  // index of start of next set
+    int hit = search_cache_set(setStart, setEnd, tag, cache);
+    // HIT
+    if (hit != -1){
+        cache->blocks[hit].data[offset] = data;
+        return; }
+    // MISS
+    int emptySlot = check_valid(setStart, setEnd, cache);
+    if (emptySlot != -1){
+        init_block(cache, state, addr, tag, setIndex, offset, emptySlot);    // bring in block
+        cache->blocks[emptySlot].data[offset] = data;                        // write to cache block
+        return; }
+    // EVICT
+    int evictionBlock = evict(setStart, setEnd, cache, state);
+    if (cache->blocks[evictionBlock].isDirty == true){
+        int writeBackAddr = write_back_addr(cache, state, tag, setIndex, offset);
+        write_back(cache, state, writeBackAddr, evictionBlock); }           // write back to memory
+    init_block(cache, state, addr, tag, setIndex, offset, evictionBlock);   // bring in cache block from memory
+    cache->blocks[evictionBlock].data[offset] = data;                       // write to cache block
+}
+
+// update LRU function
+void updateLRU(cacheStruct* cache, int target, int set){
+    int i = cache->blockSize * set;                 // index of first bloack in set
+    int end =  cache->blockSize * (set + 1);        // index of start of next set
+    while (i < end){
+        if(target != i){                           // skip target block
+            if (cache->blocks[i].lruLabel > cache->blocks[target].lruLabel){  // if LRU greater than target OG LRU
+                cache->blocks[i].lruLabel--;        // decrement LRU
+            }
+        }
+        i++;                                       // go to next block
+    }
+    cache->blocks[target].lruLabel = cache->blockSize - 1;     // sent MRU to greatest count
+}
+
+// search set for hit, return  index of block that hit, return -1 if miss
+int search_cache_set (int start, int end, int tag, cacheStruct* cache){
+    int i = start;
+    while (i < end){
+        if (cache->blocks[i].tag == tag && cache->blocks[i].valid == 1 ){   // is the valid thing correct ??????????
+            return i;  }                            // returns index of block where hit
+        i++; }
+    return -1;
+}
+// check to see if entire set is full
+int check_valid (int start, int end, cacheStruct* cache){
+    int i = start;
+    while (i < end){
+        if (cache->blocks[i].valid == 0){
+            return i; }
+        i++; }
+    return -1;
+}
+// finds which block to evict from set, check_valid called first so set should be full
+// if block is dirty will write back before block is reinitalized
+int evict (int start, int end, cacheStruct* cache, struct stateStruct* state){
+    int i = start;
+    while (i < end){
+        if( cache->blocks[i].lruLabel == 0) {
+            return i; }
+        i++; }
+    return -1;
+}
+// returns mem addr to write back to from cache
+int write_back_addr( cacheStruct* cache, struct stateStruct* state, int tag, int set, int offset){
+    int offsetBits = log2(cache->blockSize);
+    int setBits = log2(cache->numSets);
+    int tagShift = tag << (offsetBits + setBits);
+    int setShift = set << offsetBits;
+    int addr = tagShift | setShift | offset;   // I think this works?????????
+    return addr;
+}
+// writes back data from eviction block to correct memory address
+void write_back( cacheStruct* cache, struct stateStruct* state, int addr, int block){
+    for( int i = 0 ; i< cache->blockSize ; i++){
+        state->mem[addr] = cache->blocks[block].data[i];
+        addr++;}
+}
+void init_block( cacheStruct* cache, struct stateStruct* state, int addr, int tag, int set, int offset, int blockIndex){
+    int j = addr - offset;              // start of indecies within block I think it works???????????????
+    cache->blocks[blockIndex].valid = 1;
+    cache->blocks[blockIndex].tag = tag;
+    cache->blocks[blockIndex].set = set;
+    for ( int i = 0; j < cache->blockSize; i++){
+    cache->blocks[blockIndex].data[i] = state->mem[j];
+    j++; }
+}
+
+
+
 
 /*
  * Log the specifics of each cache action.
@@ -366,9 +550,8 @@ void printCache()
 }
 
 
+
 // PROJ 1S HELPER FUNCS
-
-
 void printState(stateType *statePtr)
 {
     int i;
