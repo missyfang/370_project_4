@@ -140,6 +140,10 @@ still confused aboutintializing block[i].data[block offset] // where is the data
 
 // even tho cache global wouldnt carry changes from init back???????
 // check write back addr imp
+// how / when to print actions
+// init block begining addr
+// when to call LRU
+// proj1 intergration - load in sw
 // proj 4 structs
 enum actionType
 {
@@ -195,9 +199,9 @@ void updateLRU(cacheStruct* cache, int target, int set);
 int search_cache_set( int start, int end, int tag, cacheStruct* cache);
 int check_valid (int start, int end, cacheStruct* cache);
 int evict (int start, int end, cacheStruct* cache, struct stateStruct* state);
-int write_back_addr( cacheStruct* cache, struct stateStruct* state, int tag, int set, int offset);
+int write_back_addr( cacheStruct* cache, struct stateStruct* state, int evictionBlock);
 void write_back( cacheStruct* cache, struct stateStruct* state, int addr, int block);
-void init_block( cacheStruct* cache, struct stateStruct* state, int addr, int tag, int set, int offset, int blockIndex);
+void init_block( cacheStruct* cache, struct stateStruct* state, int tag, int set, int blockIndex, int startMemAddr);
 
 int loadFromMem(int addr, cacheStruct* cache, struct stateStruct * state); // Properly simulates the cache for a load from
                     // memory address “addr”. Returns the loaded value.
@@ -232,7 +236,7 @@ main(int argc, char *argv[])
             printf("error in reading address %d\n", state.numMemory);
             exit(1);
         }
-        printf("memory[%d]=%d\n", state.numMemory, state.mem[state.numMemory]);
+        //printf("memory[%d]=%d\n", state.numMemory, state.mem[state.numMemory]);
         count++;
     }
     
@@ -266,19 +270,21 @@ main(int argc, char *argv[])
     int j = 0;
     while (state.pc < state.numMemory + 1) {
         // GONNNA ADD LOAD
-        printState(&state);
+       // printState(&state);
         // extract opcode
         //int decimal = state.mem[state.pc] >> 22;
-        int decimal = loadFromMem(state.pc, &cache, &state) >> 22;
+        int thing =  loadFromMem(state.pc, &cache, &state);
+       int decimal = thing >> 22;
         opcode = decimal & 7;
         // extract regA
-        decimal = loadFromMem(state.pc, &cache, &state) >> 19;
+        decimal = thing >> 19;
         regA = decimal & 7;
         // extract regB
-        decimal = loadFromMem(state.pc, &cache, &state) >> 16;
+       decimal = thing >> 16;
         regB = decimal & 7;
         // extraxt dest for nor and add, not used anywhere else.
-        dest_reg =  loadFromMem(state.pc, &cache, &state) & 7;
+        dest_reg =  thing & 7;
+       // dest_reg =  decimal & 7;
         // opcode == add
         if (opcode == 0){
             state.reg[dest_reg] = state.reg[regA] + state.reg[regB];  // get a content ????????
@@ -293,7 +299,7 @@ main(int argc, char *argv[])
         if ( opcode == 2){
            // offset = convertNum(state.mem[state.pc] & 0xffff); // keeps only last 16 bits of decimal
             //state.reg[regB] = state.mem[state.reg[regA] + offset]; // = load[state.reg[regA] + offset}
-            offset = convertNum(loadFromMem(state.pc, &cache, &state) & 0xffff);
+            offset = convertNum(thing & 0xffff);
             int trash = state.reg[regA] + offset;
             state.reg[regB] = loadFromMem(trash, &cache, &state);
             state.pc++;
@@ -302,7 +308,8 @@ main(int argc, char *argv[])
         if ( opcode == 3){
            // offset = convertNum(state.mem[state.pc] & 0xffff); // keeps only last 16 bits of decimal
             // state.mem[offset + state.reg[regA]] = state.reg[regB]; // at memory location offset + content of A =  content of B
-            offset = convertNum(loadFromMem(state.pc, &cache, &state) & 0xffff);
+           // offset = convertNum(loadFromMem(state.pc, &cache, &state) & 0xffff);
+            offset = convertNum(thing & 0xffff);
             int shit = offset + state.reg[regA];
             int data = state.reg[regB];
             storeToMem(shit, data,&cache, &state);
@@ -335,11 +342,11 @@ main(int argc, char *argv[])
         if (opcode == 7){ state.pc++; }
         j++;
     }
-    printf("machine halted\n");
+  /* printf("machine halted\n");
     printf("total of %d instructions executed\n" , j);
     printf("final state of machine:\n");
     printState(&state);
-
+*/
     return(0);
 }
 
@@ -348,8 +355,20 @@ main(int argc, char *argv[])
 
 // return valur of addr offset
 int getOffset(int addr, cacheStruct* cache){
+    int offset;
     int bits = log2(cache->blockSize);
-    int offset =  addr & bits;                      // mask
+    if (bits == 1){
+        offset = addr & 1;
+    }
+    if (bits == 2){
+        offset = addr & 3;
+    }
+    if (bits == 4) {
+        offset = addr & 7;
+    }
+    if (bits == 8){
+        offset = addr & 15;
+    } // NEED TO FIX SOME HOW
     return offset;
 }
 // return value of addr set index
@@ -357,7 +376,19 @@ int getSetIndex(int addr, cacheStruct* cache){
     int shift = log2(cache->blockSize);              // shift by # offset bits
     int bits = log2(cache->numSets);
     int temp = addr >> shift;
-    int index = (temp & bits);             // mask and shift
+    int index = (temp & bits);
+    if (bits == 1){
+        index = temp & 1;
+    }
+    if (bits == 2){
+        index = temp & 3;
+    }
+    if (bits == 4) {
+        index = temp & 7;
+    }
+    if (bits == 8){
+        index = temp  & 15;
+    }// mask and shift
     return index;
 }
 // return value of addr tag
@@ -373,61 +404,94 @@ int loadFromMem (int addr, cacheStruct* cache, struct stateStruct* state){
     int offset = getOffset(addr, cache);
     int setIndex = getSetIndex(addr, cache);
     int tag = getTag(addr, setIndex , offset, cache);
-    
+    int startMemAddr = addr - offset;
     // check for cache hit
     int setStart = setIndex * cache->blocksPerSet; // index into set
     int setEnd = (setIndex + 1) * cache->blocksPerSet;  // index of start of next set
     int hit = search_cache_set(setStart, setEnd, tag, cache);
     if (hit != -1){                                     // HIT
-        init_block(cache, state, addr, tag, setIndex, offset, hit);    // not sure if should be passing *state?????????
+        init_block(cache, state, tag, setIndex, hit, startMemAddr);
+        // not sure if should be passing *state?????????
         // call LRU here or in init func?????????????
+        printAction(addr, 1, cacheToProcessor);
         return cache->blocks[hit].data[offset];  }     // return data found in cache
         
     // MISS
     int emptySlot = check_valid(setStart, setEnd, cache);
     if (emptySlot != -1){
-        init_block(cache, state, addr, tag, setIndex, offset, emptySlot);
+        init_block(cache, state, tag, setIndex, emptySlot, startMemAddr);
+        printAction(startMemAddr, cache->blockSize, memoryToCache);
         // call LRU here or in init func?????????????
+        printAction(addr, 1, cacheToProcessor);
         return cache->blocks[emptySlot].data[offset]; } // return data put into empty slot in cache
     
     // EVICT
     int evictionBlock = evict(setStart, setEnd, cache, state);
+    int writeBackAddr = write_back_addr(cache, state, evictionBlock);
+   // DIRTY NEED TO WRITE BACK
     if (cache->blocks[evictionBlock].isDirty == true){              // check if dirty
-        int writeBackAddr = write_back_addr(cache, state, tag, setIndex, offset);
-        write_back(cache, state, writeBackAddr, evictionBlock); }
-    init_block(cache, state, addr, tag, setIndex, offset, evictionBlock);
+        write_back(cache, state, writeBackAddr, evictionBlock);
+        init_block(cache, state, tag, setIndex, evictionBlock, startMemAddr);
+        printAction(startMemAddr, cache->blockSize, memoryToCache);
+        printAction(addr, 1, cacheToProcessor);
+        return cache->blocks[evictionBlock].data[offset];
+    }
+    // NO WRITE BACK
+    printAction(writeBackAddr,cache->blockSize ,cacheToNowhere);
+    init_block(cache, state, tag, setIndex, evictionBlock, startMemAddr);
+    printAction(startMemAddr, cache->blockSize, memoryToCache);
+    printAction(addr, 1, cacheToProcessor);
     return cache->blocks[evictionBlock].data[offset];
 }
 void storeToMem( int addr, int data, cacheStruct* cache, struct stateStruct* state){
     int offset = getOffset(addr, cache);
     int setIndex = getSetIndex(addr, cache);
     int tag = getTag(addr, setIndex , offset, cache);
+    int startMemAddr = addr - offset ;
     int setStart = setIndex * cache->blocksPerSet; // index into set
     int setEnd = (setIndex + 1) * cache->blocksPerSet;  // index of start of next set
     int hit = search_cache_set(setStart, setEnd, tag, cache);
     // HIT
     if (hit != -1){
         cache->blocks[hit].data[offset] = data;
+        cache->blocks[hit].isDirty = true;
         return; }
     // MISS
     int emptySlot = check_valid(setStart, setEnd, cache);
     if (emptySlot != -1){
-        init_block(cache, state, addr, tag, setIndex, offset, emptySlot);    // bring in block
-        cache->blocks[emptySlot].data[offset] = data;                        // write to cache block
+        init_block(cache, state, tag, setIndex, emptySlot, startMemAddr);    // bring in block
+        printAction(startMemAddr, cache->blockSize, memoryToCache);
+        cache->blocks[emptySlot].data[offset] = data; // write to cache block
+        cache->blocks[emptySlot].isDirty = true;
+        printAction(addr,1, processorToCache);
         return; }
     // EVICT
     int evictionBlock = evict(setStart, setEnd, cache, state);
+    int writeBackAddr = write_back_addr(cache, state, evictionBlock);
     if (cache->blocks[evictionBlock].isDirty == true){
-        int writeBackAddr = write_back_addr(cache, state, tag, setIndex, offset);
-        write_back(cache, state, writeBackAddr, evictionBlock); }           // write back to memory
-    init_block(cache, state, addr, tag, setIndex, offset, evictionBlock);   // bring in cache block from memory
-    cache->blocks[evictionBlock].data[offset] = data;                       // write to cache block
+        write_back(cache, state, writeBackAddr, evictionBlock);
+        init_block(cache, state, tag, setIndex, evictionBlock, startMemAddr);   // bring in cache block from memory
+        printAction(startMemAddr, cache->blockSize, memoryToCache);
+        cache->blocks[evictionBlock].data[offset] = data;
+        cache->blocks[evictionBlock].isDirty = true;
+        printAction(addr,1,processorToCache);
+        return;
+    }           // write back to memory
+    if(cache->blocks[evictionBlock].isDirty == false ){
+        printAction(writeBackAddr,cache->blockSize ,cacheToNowhere);
+    init_block(cache, state, tag, setIndex, evictionBlock, startMemAddr);   // bring in cache block from memory
+    printAction(startMemAddr, cache->blockSize, memoryToCache);
+    cache->blocks[evictionBlock].data[offset] = data;
+    cache->blocks[evictionBlock].isDirty = true;
+    printAction(addr,1,processorToCache);
+    }
+    // write to cache block
 }
 
 // update LRU function
 void updateLRU(cacheStruct* cache, int target, int set){
-    int i = cache->blockSize * set;                 // index of first bloack in set
-    int end =  cache->blockSize * (set + 1);        // index of start of next set
+    int i = cache->blocksPerSet* set;                 // index of first bloack in set
+    int end =  cache->blocksPerSet * (set + 1);        // index of start of next set
     while (i < end){
         if(target != i){                           // skip target block
             if (cache->blocks[i].lruLabel > cache->blocks[target].lruLabel){  // if LRU greater than target OG LRU
@@ -436,7 +500,7 @@ void updateLRU(cacheStruct* cache, int target, int set){
         }
         i++;                                       // go to next block
     }
-    cache->blocks[target].lruLabel = cache->blockSize - 1;     // sent MRU to greatest count
+    cache->blocks[target].lruLabel = cache->blocksPerSet - 1;     // sent MRU to greatest count
 }
 
 // search set for hit, return  index of block that hit, return -1 if miss
@@ -468,28 +532,35 @@ int evict (int start, int end, cacheStruct* cache, struct stateStruct* state){
     return -1;
 }
 // returns mem addr to write back to from cache
-int write_back_addr( cacheStruct* cache, struct stateStruct* state, int tag, int set, int offset){
+int write_back_addr( cacheStruct* cache, struct stateStruct* state, int block){
     int offsetBits = log2(cache->blockSize);
     int setBits = log2(cache->numSets);
-    int tagShift = tag << (offsetBits + setBits);
-    int setShift = set << offsetBits;
-    int addr = tagShift | setShift | offset;   // I think this works?????????
+    int tagShift = offsetBits + setBits;
+    int set = cache->blocks[block].set << offsetBits;
+    int tag =  cache->blocks[block].tag  << tagShift;
+    int addr = tag | set;   // I think this works?????????
     return addr;
 }
 // writes back data from eviction block to correct memory address
 void write_back( cacheStruct* cache, struct stateStruct* state, int addr, int block){
+    int j = addr;
     for( int i = 0 ; i< cache->blockSize ; i++){
-        state->mem[addr] = cache->blocks[block].data[i];
-        addr++;}
+        state->mem[j] = cache->blocks[block].data[i];
+        j++;
+    }
+    printAction(addr,cache->blockSize ,cacheToMemory);
 }
-void init_block( cacheStruct* cache, struct stateStruct* state, int addr, int tag, int set, int offset, int blockIndex){
-    int j = addr - offset;              // start of indecies within block I think it works???????????????
+void init_block( cacheStruct* cache, struct stateStruct* state, int tag, int set, int blockIndex, int startMemAddr){
+    int j = startMemAddr;              // start of indecies within block I think it works???????????????
     cache->blocks[blockIndex].valid = 1;
+    cache->blocks[blockIndex].isDirty = false;
     cache->blocks[blockIndex].tag = tag;
     cache->blocks[blockIndex].set = set;
     for ( int i = 0; j < cache->blockSize; i++){
     cache->blocks[blockIndex].data[i] = state->mem[j];
     j++; }
+    updateLRU(cache, blockIndex, set);
+    //printAction(j, cache->blockSize, memoryToCache);
 }
 
 

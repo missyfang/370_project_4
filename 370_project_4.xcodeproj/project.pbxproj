@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A90274D02626264F00B9B24C /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = A90274CF2626264F00B9B24C /* main.c */; };
+		A90274D02626264F00B9B24C /* simulator.c in Sources */ = {isa = PBXBuildFile; fileRef = A90274CF2626264F00B9B24C /* simulator.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -24,7 +24,8 @@
 
 /* Begin PBXFileReference section */
 		A90274CC2626264F00B9B24C /* 370_project_4 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = 370_project_4; sourceTree = BUILT_PRODUCTS_DIR; };
-		A90274CF2626264F00B9B24C /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		A90274CF2626264F00B9B24C /* simulator.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = simulator.c; sourceTree = "<group>"; };
+		A9898DDC262E689400FA789F /* basic.mc */ = {isa = PBXFileReference; lastKnownFileType = text; path = basic.mc; sourceTree = "<group>"; };
 		A9FA349F262C9DCA00EB1B89 /* spec.mc */ = {isa = PBXFileReference; lastKnownFileType = text; path = spec.mc; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -58,8 +59,9 @@
 		A90274CE2626264F00B9B24C /* 370_project_4 */ = {
 			isa = PBXGroup;
 			children = (
-				A90274CF2626264F00B9B24C /* main.c */,
 				A9FA349F262C9DCA00EB1B89 /* spec.mc */,
+				A90274CF2626264F00B9B24C /* simulator.c */,
+				A9898DDC262E689400FA789F /* basic.mc */,
 			);
 			path = 370_project_4;
 			sourceTree = "<group>";
@@ -120,7 +122,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A90274D02626264F00B9B24C /* main.c in Sources */,
+				A90274D02626264F00B9B24C /* simulator.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
