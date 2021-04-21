@@ -25,8 +25,17 @@
 /* Begin PBXFileReference section */
 		A90274CC2626264F00B9B24C /* 370_project_4 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = 370_project_4; sourceTree = BUILT_PRODUCTS_DIR; };
 		A90274CF2626264F00B9B24C /* simulator.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = simulator.c; sourceTree = "<group>"; };
-		A9898DDC262E689400FA789F /* basic.mc */ = {isa = PBXFileReference; lastKnownFileType = text; path = basic.mc; sourceTree = "<group>"; };
-		A9FA349F262C9DCA00EB1B89 /* spec.mc */ = {isa = PBXFileReference; lastKnownFileType = text; path = spec.mc; sourceTree = "<group>"; };
+		A96C79A4262F434A00C37343 /* run.mc */ = {isa = PBXFileReference; lastKnownFileType = text; path = run.mc; sourceTree = "<group>"; };
+		A96C79A8262F475800C37343 /* SWsimple.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = SWsimple.txt; sourceTree = "<group>"; };
+		A96C79AA262F502C00C37343 /* selfModify_1.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = selfModify_1.txt; sourceTree = "<group>"; };
+		A96C79AB262F578B00C37343 /* testOne.1.1.3.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = testOne.1.1.3.txt; sourceTree = "<group>"; };
+		A96C79AD262F662400C37343 /* testTwo.4.4.2.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = testTwo.4.4.2.txt; sourceTree = "<group>"; };
+		A96C79AF262F674700C37343 /* testThree.4.4.8.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = testThree.4.4.8.txt; sourceTree = "<group>"; };
+		A96C79B0262F676900C37343 /* textFour.1.4.8.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = textFour.1.4.8.txt; sourceTree = "<group>"; };
+		A96C79B2262F67DA00C37343 /* testFive.8.2.1.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = testFive.8.2.1.txt; sourceTree = "<group>"; };
+		A96C79B4262F834B00C37343 /* testSix.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = testSix.txt; sourceTree = "<group>"; };
+		A9898DDC262E689400FA789F /* basic.4.2.1.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = basic.4.2.1.txt; sourceTree = "<group>"; };
+		A9FA349F262C9DCA00EB1B89 /* spec.4.2.1.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = spec.4.2.1.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -59,9 +68,18 @@
 		A90274CE2626264F00B9B24C /* 370_project_4 */ = {
 			isa = PBXGroup;
 			children = (
-				A9FA349F262C9DCA00EB1B89 /* spec.mc */,
+				A96C79A4262F434A00C37343 /* run.mc */,
 				A90274CF2626264F00B9B24C /* simulator.c */,
-				A9898DDC262E689400FA789F /* basic.mc */,
+				A9FA349F262C9DCA00EB1B89 /* spec.4.2.1.txt */,
+				A9898DDC262E689400FA789F /* basic.4.2.1.txt */,
+				A96C79A8262F475800C37343 /* SWsimple.txt */,
+				A96C79AA262F502C00C37343 /* selfModify_1.txt */,
+				A96C79AB262F578B00C37343 /* testOne.1.1.3.txt */,
+				A96C79AD262F662400C37343 /* testTwo.4.4.2.txt */,
+				A96C79AF262F674700C37343 /* testThree.4.4.8.txt */,
+				A96C79B0262F676900C37343 /* textFour.1.4.8.txt */,
+				A96C79B2262F67DA00C37343 /* testFive.8.2.1.txt */,
+				A96C79B4262F834B00C37343 /* testSix.txt */,
 			);
 			path = 370_project_4;
 			sourceTree = "<group>";
