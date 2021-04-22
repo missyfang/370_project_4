@@ -268,9 +268,11 @@ main(int argc, char *argv[])
     
     // intruction count
     int j = 0;
-    while (state.pc < state.numMemory + 1) {
+    //while (state.pc < state.numMemory + 1) {
+    while (true) {
         // GONNNA ADD LOAD
-       //printState(&state);
+     //  printState(&state);
+      //  printCache(); 
         // extract opcode
         //int decimal = state.mem[state.pc] >> 22;
         int thing =  loadFromMem(state.pc, &cache, &state);
@@ -401,8 +403,9 @@ int loadFromMem (int addr, cacheStruct* cache, struct stateStruct* state){
     int setEnd = (setIndex + 1) * cache->blocksPerSet;  // index of start of next set
     int hit = search_cache_set(setStart, setEnd, tag, cache);
     if (hit != -1){                                     // HIT
-        init_block(cache, state, tag, setIndex, hit, startMemAddr);
+        //init_block(cache, state, tag, setIndex, hit, startMemAddr);
         // not sure if should be passing *state?????????
+        updateLRU(cache, hit, setIndex);
       printAction(addr, 1, cacheToProcessor);
         return cache->blocks[hit].data[offset];  }     // return data found in cache
         
@@ -443,7 +446,8 @@ void storeToMem( int addr, int data, cacheStruct* cache, struct stateStruct* sta
     int hit = search_cache_set(setStart, setEnd, tag, cache);
     // HIT
     if (hit != -1){
-        init_block(cache, state, tag, setIndex, hit, startMemAddr);
+       // init_block(cache, state, tag, setIndex, hit, startMemAddr);
+        updateLRU(cache, hit, setIndex);
         cache->blocks[hit].data[offset] = data;
         cache->blocks[hit].isDirty = true;
         printAction(addr, 1, processorToCache);
@@ -621,7 +625,7 @@ void printCache()
 
 
 // PROJ 1S HELPER FUNCS
-/*void printState(stateType *statePtr)
+void printState(stateType *statePtr)
 {
     int i;
     printf("\n@@@\nstate:\n");
@@ -637,7 +641,7 @@ void printCache()
     }
     printf("end state\n");
 }
-*/
+
 int convertNum(int num)
 {
     /* convert a 16-bit number into a 32-bit Linux integer */
